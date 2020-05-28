@@ -1,1 +1,1 @@
-web: microserver --port ${PORT}
+web: cargo make serve
