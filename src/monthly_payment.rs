@@ -114,6 +114,19 @@ pub fn view(model: &Model) -> Node<Msg> {
                 ]
             ),
             input_row(
+                "Savings APR:",
+                div![
+                    input![
+                        attrs![
+                        At::Type => "number",
+                        At::Step => "0.01",
+                        At::Value => model.savings_apr
+                        ],
+                        input_ev(Ev::Input, |str| Msg::SavingsAprInput(str.parse().unwrap())),
+                    ]
+                ]
+            ),
+            input_row(
                 "Desired Annual Retirement Income:",
                 div![
                     input![
@@ -136,19 +149,6 @@ pub fn view(model: &Model) -> Node<Msg> {
                         At::Value => model.safe_withdrawal_rate
                         ],
                         input_ev(Ev::Input, |str| Msg::SafeWithdrawalRateInput(str.parse().unwrap())),
-                    ]
-                ]
-            ),
-            input_row(
-                "Savings APR:",
-                div![
-                    input![
-                        attrs![
-                        At::Type => "number",
-                        At::Step => "0.01",
-                        At::Value => model.savings_apr
-                        ],
-                        input_ev(Ev::Input, |str| Msg::SavingsAprInput(str.parse().unwrap())),
                     ]
                 ]
             ),
