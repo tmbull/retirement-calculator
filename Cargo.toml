@@ -1,7 +1,7 @@
 [package]
-name = "monthly-payment-calculator"
+name = "retirement-calculator"
 version = "0.1.0"
-authors = ["Greg <greg@greg.lol>"]
+authors = ["Tristan <tristan.m.bull@gmail.com>"]
 edition = "2018"
 
 
