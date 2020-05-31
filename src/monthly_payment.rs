@@ -169,7 +169,7 @@ pub fn view(model: &Model) -> Node<Msg> {
             strong![model.years_to_retirement.to_string()]
         ],
         button![
-            style![St::Position => "absolute", St::Top => unit!(1, rem), St::Right => unit!(1, rem)],
+            style![St::Position => "absolute", St::Top => unit!(1, px), St::Right => unit!(1, px)],
             simple_ev(Ev::Click, Msg::RemoveClicked),
             "-"
         ]
