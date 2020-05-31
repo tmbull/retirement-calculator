@@ -130,25 +130,12 @@ pub fn view(model: &Model) -> Node<Msg> {
             //         <i class="fas fa-plus-square"></i>
             input_row(
                 "Savings APR:",
-                div![
-                    i![
-                        class!["fas", "fa-minus-square"],
-                        simple_ev("click", Msg::DecrementApr)
-                    ],
-                    input![
-                        attrs![
-                        At::Type => "number",
-                        At::Step => "1",
-                        At::Value => model.savings_apr.to_string(),
-                        ],
-                        input_ev(Ev::Input, |str| Msg::SavingsAprInput(str.parse().unwrap())),
-                    ],
-                    "%",
-                    i![
-                        class!["fas", "fa-plus-square"],
-                        simple_ev("click", Msg::IncrementApr)
-                    ],
-                ]
+                number_input(
+                    Msg::DecrementApr,
+                    Msg::IncrementApr,
+                    |str| Msg::SavingsAprInput(str),
+                    &model.savings_apr
+                )
             ),
             input_row(
                 "Desired Annual Retirement Income:",
@@ -165,25 +152,12 @@ pub fn view(model: &Model) -> Node<Msg> {
             ),
             input_row(
                 "Safe Withdrawal Rate:",
-                div![
-                    i![
-                        class!["fas", "fa-minus-square"],
-                        simple_ev("click", Msg::DecrementSafeWithdrawalRate)
-                    ],
-                    input![
-                        attrs![
-                        At::Type => "number",
-                        At::Step => "1",
-                        At::Value => model.safe_withdrawal_rate.to_string()
-                        ],
-                        input_ev(Ev::Input, |str| Msg::SafeWithdrawalRateInput(str.parse().unwrap())),
-                    ],
-                    "%",
-                    i![
-                        class!["fas", "fa-plus-square"],
-                        simple_ev("click", Msg::IncrementSafeWithdrawalRate)
-                    ],
-                ]
+                number_input(
+                    Msg::DecrementSafeWithdrawalRate,
+                    Msg::IncrementSafeWithdrawalRate,
+                    |str| Msg::SafeWithdrawalRateInput(str),
+                    &model.safe_withdrawal_rate
+                )
             ),
         ]],
         p![
@@ -203,7 +177,30 @@ pub fn view(model: &Model) -> Node<Msg> {
 }
 
 fn input_row(title: &str, content: Node<Msg>) -> Node<Msg> {
-    tr![td![title], td![content]]
+    tr![td![class!("label"), title], td![content]]
+}
+
+fn number_input(decrement_msg: Msg, increment_msg: Msg, update_msg: fn(String) -> Msg, display_value: &str) -> Node<Msg> {
+    div![
+        class!("calc-input"),
+        i![
+            class!["fas", "fa-minus-square"],
+            simple_ev("click", decrement_msg)
+        ],
+        input![
+            attrs![
+            At::Type => "number",
+            At::Step => "1",
+            At::Value => display_value
+            ],
+            input_ev(Ev::Input, move |str| update_msg(str)),
+        ],
+        div![class!("suffix"), "%"],
+        i![
+            class!["fas", "fa-plus-square"],
+            simple_ev("click", increment_msg)
+        ],
+    ]
 }
 
 // ------ ------

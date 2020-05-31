@@ -49,6 +49,7 @@ COPY --from=cargo-build /usr/src/retirement-calculator/bin/microserver /microser
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY index.html /app/
+COPY style.css /app/
 COPY --from=cargo-build /usr/src/retirement-calculator/pkg /app/pkg
 
 RUN adduser -D microuser

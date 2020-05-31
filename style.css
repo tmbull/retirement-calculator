@@ -1,0 +1,21 @@
+.label {
+    width: 232px;
+    text-align: right;
+}
+
+.calc-input {
+    display: table;
+}
+
+input {
+    width: 100%;
+}
+
+.suffix {
+    display: table-cell;
+    padding-left: 8px;
+}
+
+.fas {
+    display: table-cell;
+}
