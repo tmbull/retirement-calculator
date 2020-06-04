@@ -88,7 +88,7 @@ pub fn update(msg: Msg, model: &mut Model) -> OutMsg {
         model.desired_annual_retirement_income, model.safe_withdrawal_rate.parse().unwrap());
     model.years_to_retirement =
         calc_years_to_retirement(
-            model.annual_savings_contribution_in_dollars, parsed_savings_apr,
+            model.annual_savings_contribution_in_dollars, model.savings_apr.parse().unwrap(),
             model.stash, model.current_retirement_savings_in_dollars);
     out_msg
 }
