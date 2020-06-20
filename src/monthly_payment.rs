@@ -1,5 +1,7 @@
 use seed::{prelude::*, *};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+
 
 // ------ ------
 //     Model
@@ -99,85 +101,116 @@ pub fn update(msg: Msg, model: &mut Model) -> OutMsg {
 
 pub fn view(model: &Model) -> Node<Msg> {
     div![
-        style![St::Border => "1px solid black",
-               St::Padding => unit!(1, rem),
-               St::Position => "relative"
-               St::MarginBottom => unit!(1, rem),
-        ],
-        table![tbody![
-            input_row(
-                "Initial Retirement Savings:",
-                input![
-                    attrs![
-                    At::Type => "number",
-                    At::Step => "1000",
-                    At::Value => model.current_retirement_savings_in_dollars
-                    ],
-                    input_ev(Ev::Input, |str| Msg::InitialRetirementSavingsInput(str.parse().unwrap())),
-                ]
-            ),
-            input_row(
-                "Current Annual Savings Rate:",
-                input![
-                    attrs![
-                    At::Type => "number",
-                    At::Step => "1000",
-                    At::Value => model.annual_savings_contribution_in_dollars
-                    ],
-                    input_ev(Ev::Input, |str| Msg::CurrentSavingsInput(str.parse().unwrap())),
-                ]
-            ),
-            //         <i class="fas fa-plus-square"></i>
-            input_row(
-                "Savings APR:",
-                number_input(
-                    Msg::DecrementApr,
-                    Msg::IncrementApr,
-                    |str| Msg::SavingsAprInput(str),
-                    &model.savings_apr
-                )
-            ),
-            input_row(
-                "Desired Annual Retirement Income:",
+        class!("row"),
+        div![
+            class!("col s12"),
+            div![
+                class!("card"),
                 div![
-                    input![
-                        attrs![
-                        At::Type => "number",
-                        At::Step => "1000",
-                        At::Value => model.desired_annual_retirement_income
+                    class!("card-content"),
+                    materialize_text_input(
+                        "init_savings",
+                        |str| Msg::InitialRetirementSavingsInput(str.parse().unwrap()),
+                        "Initial Retirement Savings",
+                        &model.current_retirement_savings_in_dollars
+                    ),
+                    materialize_text_input(
+                        "current_savings_rate",
+                        |str| Msg::CurrentSavingsInput(str.parse().unwrap()),
+                        "Current Annual Savings Rate",
+                        &model.annual_savings_contribution_in_dollars
+                    ),
+                    materialize_text_input(
+                        "savings_apr",
+                        |str| Msg::SavingsAprInput(str.parse().unwrap()),
+                        "Savings APR",
+                        &model.savings_apr
+                    ),
+                    // input_row(
+                    //     "Savings APR:",
+                    //     number_input(
+                    //         Msg::DecrementApr,
+                    //         Msg::IncrementApr,
+                    //         |str| Msg::SavingsAprInput(str),
+                    //         &model.savings_apr
+                    //     )
+                    // ),
+                    materialize_text_input(
+                        "desired_retirement_income",
+                        |str| Msg::DesiredRetirementInput(str.parse().unwrap()),
+                        "Desired Annual Retirement Income",
+                        &model.desired_annual_retirement_income
+                    ),
+                    materialize_text_input(
+                        "safe_withdrawal_rate",
+                        |str| Msg::SafeWithdrawalRateInput(str.parse().unwrap()),
+                        "Safe Withdrawal Rate",
+                        &model.safe_withdrawal_rate
+                    ),
+                    // input_row(
+                    //     "Safe Withdrawal Rate:",
+                    //     number_input(
+                    //         Msg::DecrementSafeWithdrawalRate,
+                    //         Msg::IncrementSafeWithdrawalRate,
+                    //         |str| Msg::SafeWithdrawalRateInput(str),
+                    //         &model.safe_withdrawal_rate
+                    //     )
+                    // ),
+                    a![
+                        class!("btn-floating halfway-fab waves-effect waves-light red"),
+                        i![
+                            class!("material-icons"),
+                            "remove"
                         ],
-                        input_ev(Ev::Input, |str| Msg::DesiredRetirementInput(str.parse().unwrap())),
+                        simple_ev(Ev::Click, Msg::RemoveClicked),
+                    ],
+                ],
+                //           <a class="btn-floating halfway-fab waves-effect waves-light red"><i class="material-icons">add</i></a>
+                div![
+                    class!("card-action grey lighten-4"),
+                    p![
+                        "Required retirement stash: ",
+                        strong![model.stash.to_string()]
+                    ],
+                    p![
+                        "Years to retirement: ",
+                        strong![model.years_to_retirement.to_string()]
                     ]
                 ]
-            ),
-            input_row(
-                "Safe Withdrawal Rate:",
-                number_input(
-                    Msg::DecrementSafeWithdrawalRate,
-                    Msg::IncrementSafeWithdrawalRate,
-                    |str| Msg::SafeWithdrawalRateInput(str),
-                    &model.safe_withdrawal_rate
-                )
-            ),
-        ]],
-        p![
-            "Required retirement stash: ",
-            strong![model.stash.to_string()]
-        ],
-        p![
-            "Years to retirement: ",
-            strong![model.years_to_retirement.to_string()]
-        ],
-        button![
-            style![St::Position => "absolute", St::Top => unit!(1, px), St::Right => unit!(1, px)],
-            simple_ev(Ev::Click, Msg::RemoveClicked),
-            "-"
+            ]
         ]
     ]
 }
 
 fn input_row(title: &str, content: Node<Msg>) -> Node<Msg> {
     tr![td![class!("label"), title], td![content]]
+}
+
+fn materialize_text_input(
+    id: &str, update_msg: fn(String) -> Msg, label: &str, text: &impl Display) -> Node<Msg> {
+    div![
+        class!("row"),
+        div![
+            class!("input-field"),
+            // "$",
+            input![
+                class!("validate"),
+                attrs![
+                    At::Type => "number",
+                    At::Value => text,
+                    At::Id => id
+                ],
+                input_ev(Ev::Input, move |str| update_msg(str))
+            ],
+            label![
+                class!("active"),
+                attrs![
+                    At::For => id
+                ],
+                label
+            ]
+        ]
+    ]
 }
 
 fn number_input(decrement_msg: Msg, increment_msg: Msg, update_msg: fn(String) -> Msg, display_value: &str) -> Node<Msg> {

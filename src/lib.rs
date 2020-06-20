@@ -73,7 +73,7 @@ fn update(msg: Msg, model: &mut Model, _: &mut impl Orders<Msg>) {
 
 fn view(model: &Model) -> impl View<Msg> {
     nodes![
-        h1!["Time to Retirement Calculator"],
+        h3!["Time to Retirement Calculator"],
         model
             .data
             .monthly_payment_models
@@ -84,7 +84,14 @@ fn view(model: &Model) -> impl View<Msg> {
                     .map_msg({ move |msg| Msg::MonthlyPayment((id2, msg)) })
             })
             .collect::<Vec<Node<Msg>>>(),
-        button![simple_ev(Ev::Click, Msg::AddMonthlyCalc()), "+"]
+        a![
+            class!("btn-floating btn-large waves-effect waves-light red"),
+            i![
+                class!("material-icons"),
+                "add"
+            ],
+            simple_ev(Ev::Click, Msg::AddMonthlyCalc())
+        ]
     ]
 }
 
