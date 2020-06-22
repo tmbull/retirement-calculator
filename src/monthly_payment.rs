@@ -6,15 +6,15 @@ use std::fmt::Display;
 // ------ ------
 //     Model
 // ------ ------
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Model {
-    annual_savings_contribution_in_dollars: f64,
-    desired_annual_retirement_income: f64,
-    stash: f64,
-    years_to_retirement: f64,
+    annual_savings_contribution_in_dollars: String,
+    desired_annual_retirement_income: String,
+    stash: Option<f64>,
+    years_to_retirement: Option<f64>,
     savings_apr: String,
     safe_withdrawal_rate: String,
-    current_retirement_savings_in_dollars: f64,
+    initial_retirement_savings_in_dollars: String,
 }
 
 impl Model {
@@ -27,15 +27,15 @@ impl Model {
         let stash = calc_required_stash(
             desired_annual_retirement_income, safe_withdrawal_rate);
         Model {
-            annual_savings_contribution_in_dollars,
-            desired_annual_retirement_income,
-            years_to_retirement: calc_years_to_retirement(
+            annual_savings_contribution_in_dollars: annual_savings_contribution_in_dollars.to_string(),
+            desired_annual_retirement_income: desired_annual_retirement_income.to_string(),
+            years_to_retirement: Some(calc_years_to_retirement(
                 annual_savings_contribution_in_dollars, savings_apr,
-                stash,current_retirement_savings_in_dollars),
-            stash,
+                stash,current_retirement_savings_in_dollars)),
+            stash: Some(stash),
             savings_apr: savings_apr.to_string(),
             safe_withdrawal_rate: safe_withdrawal_rate.to_string(),
-            current_retirement_savings_in_dollars,
+            initial_retirement_savings_in_dollars: current_retirement_savings_in_dollars.to_string(),
         }
     }
 }
@@ -49,17 +49,13 @@ pub enum OutMsg {
     RemoveMe,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Msg {
-    InitialRetirementSavingsInput(f64),
-    CurrentSavingsInput(f64),
-    DesiredRetirementInput(f64),
-    DecrementApr,
+    InitialRetirementSavingsInput(String),
+    CurrentSavingsInput(String),
+    DesiredRetirementInput(String),
     SavingsAprInput(String),
-    IncrementApr,
-    DecrementSafeWithdrawalRate,
     SafeWithdrawalRateInput(String),
-    IncrementSafeWithdrawalRate,
     RemoveClicked,
 }
 
@@ -68,30 +64,38 @@ pub fn update(msg: Msg, model: &mut Model) -> OutMsg {
         Msg::RemoveClicked => OutMsg::RemoveMe,
         _ => OutMsg::NoOp,
     };
-    let parsed_savings_apr = model.savings_apr.parse::<f64>().unwrap();
-    let parsed_safe_withdrawal_rate = model.safe_withdrawal_rate.parse::<f64>().unwrap();
     match msg {
-        Msg::InitialRetirementSavingsInput(inp) => model.current_retirement_savings_in_dollars = inp,
+        Msg::InitialRetirementSavingsInput(inp) => model.initial_retirement_savings_in_dollars = inp,
         Msg::CurrentSavingsInput(inp) => model.annual_savings_contribution_in_dollars = inp,
         Msg::DesiredRetirementInput(inp) => model.desired_annual_retirement_income = inp,
-        // TODO: better error handling
-        Msg::DecrementApr => {
-            model.savings_apr = (parsed_savings_apr - 1.0).to_string();
-            log!("{}", model.savings_apr)
-        },
         Msg::SavingsAprInput(inp) => model.savings_apr = inp,
-        Msg::IncrementApr => model.savings_apr = (parsed_savings_apr + 1.0).to_string(),
         Msg::SafeWithdrawalRateInput(inp) => model.safe_withdrawal_rate = inp,
         Msg::RemoveClicked => (),
-        Msg::DecrementSafeWithdrawalRate => model.safe_withdrawal_rate = (parsed_safe_withdrawal_rate - 1.0).to_string(),
-        Msg::IncrementSafeWithdrawalRate => model.safe_withdrawal_rate = (parsed_safe_withdrawal_rate + 1.0).to_string(),
     };
-    model.stash = calc_required_stash(
-        model.desired_annual_retirement_income, model.safe_withdrawal_rate.parse().unwrap());
-    model.years_to_retirement =
-        calc_years_to_retirement(
-            model.annual_savings_contribution_in_dollars, model.savings_apr.parse().unwrap(),
-            model.stash, model.current_retirement_savings_in_dollars);
+    let calc_result = model.desired_annual_retirement_income.parse().and_then(|retirement_income| {
+        model.annual_savings_contribution_in_dollars.parse().and_then(|annual_contribution| {
+            model.initial_retirement_savings_in_dollars.parse().and_then(|initial_savings| {
+                model.safe_withdrawal_rate.parse().and_then(|safe_withdrawal_rate| {
+                    model.savings_apr.parse().and_then(|savings_apr| {
+                        let stash = calc_required_stash(retirement_income, safe_withdrawal_rate);
+                        let years_to_retirement = calc_years_to_retirement(
+                            annual_contribution, savings_apr,stash, initial_savings);
+                        Ok((stash, years_to_retirement))
+                    })
+                })
+            })
+        })
+    });
+    match calc_result {
+        Ok((stash, years)) => {
+            model.stash = Some(stash);
+            model.years_to_retirement = Some(years);
+        }
+        _ => {
+            model.stash = None;
+            model.years_to_retirement = None;
+        }
+    }
     out_msg
 }
 
@@ -99,7 +103,16 @@ pub fn update(msg: Msg, model: &mut Model) -> OutMsg {
 //     View
 // ------ ------
 
+pub fn option_to_string(option: Option<impl Display>) -> String {
+    match option {
+        Some(num) => num.to_string(),
+        None => "--".to_string()
+    }
+}
+
 pub fn view(model: &Model) -> Node<Msg> {
+    let years_to_retirement_str = option_to_string(model.years_to_retirement);
+    let stash_str = option_to_string(model.stash);
     div![
         class!("row"),
         div![
@@ -108,54 +121,36 @@ pub fn view(model: &Model) -> Node<Msg> {
                 class!("card"),
                 div![
                     class!("card-content"),
-                    materialize_text_input(
+                    materialize_number_input(
                         "init_savings",
-                        |str| Msg::InitialRetirementSavingsInput(str.parse().unwrap()),
+                        |str| Msg::InitialRetirementSavingsInput(str),
                         "Initial Retirement Savings",
-                        &model.current_retirement_savings_in_dollars
+                        &model.initial_retirement_savings_in_dollars
                     ),
-                    materialize_text_input(
+                    materialize_number_input(
                         "current_savings_rate",
                         |str| Msg::CurrentSavingsInput(str.parse().unwrap()),
                         "Current Annual Savings Rate",
                         &model.annual_savings_contribution_in_dollars
                     ),
-                    materialize_text_input(
+                    materialize_number_input(
                         "savings_apr",
                         |str| Msg::SavingsAprInput(str.parse().unwrap()),
                         "Savings APR",
                         &model.savings_apr
                     ),
-                    // input_row(
-                    //     "Savings APR:",
-                    //     number_input(
-                    //         Msg::DecrementApr,
-                    //         Msg::IncrementApr,
-                    //         |str| Msg::SavingsAprInput(str),
-                    //         &model.savings_apr
-                    //     )
-                    // ),
-                    materialize_text_input(
+                    materialize_number_input(
                         "desired_retirement_income",
                         |str| Msg::DesiredRetirementInput(str.parse().unwrap()),
                         "Desired Annual Retirement Income",
                         &model.desired_annual_retirement_income
                     ),
-                    materialize_text_input(
+                    materialize_number_input(
                         "safe_withdrawal_rate",
                         |str| Msg::SafeWithdrawalRateInput(str.parse().unwrap()),
                         "Safe Withdrawal Rate",
                         &model.safe_withdrawal_rate
                     ),
-                    // input_row(
-                    //     "Safe Withdrawal Rate:",
-                    //     number_input(
-                    //         Msg::DecrementSafeWithdrawalRate,
-                    //         Msg::IncrementSafeWithdrawalRate,
-                    //         |str| Msg::SafeWithdrawalRateInput(str),
-                    //         &model.safe_withdrawal_rate
-                    //     )
-                    // ),
                     a![
                         class!("btn-floating halfway-fab waves-effect waves-light red"),
                         i![
@@ -165,16 +160,15 @@ pub fn view(model: &Model) -> Node<Msg> {
                         simple_ev(Ev::Click, Msg::RemoveClicked),
                     ],
                 ],
-                //           <a class="btn-floating halfway-fab waves-effect waves-light red"><i class="material-icons">add</i></a>
                 div![
                     class!("card-action grey lighten-4"),
                     p![
                         "Required retirement stash: ",
-                        strong![model.stash.to_string()]
+                        strong![stash_str]
                     ],
                     p![
                         "Years to retirement: ",
-                        strong![model.years_to_retirement.to_string()]
+                        strong![years_to_retirement_str]
                     ]
                 ]
             ]
@@ -182,25 +176,30 @@ pub fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn input_row(title: &str, content: Node<Msg>) -> Node<Msg> {
-    tr![td![class!("label"), title], td![content]]
-}
-
-fn materialize_text_input(
-    id: &str, update_msg: fn(String) -> Msg, label: &str, text: &impl Display) -> Node<Msg> {
+fn materialize_number_input(
+    id: &str, update_msg: fn(String) -> Msg, label: &str, text: &str) -> Node<Msg> {
+    let validation = if text.is_empty() {
+        ""
+    } else {
+        match text.parse::<f64>() {
+            Ok(_) => "valid",
+            Err(_) => "invalid",
+        }
+    };
     div![
         class!("row"),
         div![
             class!("input-field"),
             // "$",
             input![
-                class!("validate"),
+                class!["validate", validation],
                 attrs![
-                    At::Type => "number",
+                    At::Type => "text",
                     At::Value => text,
-                    At::Id => id
+                    At::Id => id,
+                    "inputmode" => "number"
                 ],
-                input_ev(Ev::Input, move |str| update_msg(str))
+                input_ev(Ev::Input, move |str| update_msg(str)),
             ],
             label![
                 class!("active"),
@@ -208,37 +207,16 @@ fn materialize_text_input(
                     At::For => id
                 ],
                 label
+            ],
+            span![
+                class!("helper-text"),
+                attrs![
+                    "data-error" => "Input is not a number"
+                ]
             ]
         ]
     ]
 }
-
-fn number_input(decrement_msg: Msg, increment_msg: Msg, update_msg: fn(String) -> Msg, display_value: &str) -> Node<Msg> {
-    div![
-        class!("calc-input"),
-        i![
-            class!["fas", "fa-minus-square"],
-            simple_ev("click", decrement_msg)
-        ],
-        input![
-            attrs![
-            At::Type => "number",
-            At::Step => "1",
-            At::Value => display_value
-            ],
-            input_ev(Ev::Input, move |str| update_msg(str)),
-        ],
-        div![class!("suffix"), "%"],
-        i![
-            class!["fas", "fa-plus-square"],
-            simple_ev("click", increment_msg)
-        ],
-    ]
-}
-
-// ------ ------
-//     Calc
-// ------ ------
 
 fn calc_years_to_retirement(savings_contribution_per_year: f64, savings_apr: f64,
                             desired_stash: f64,
@@ -248,7 +226,6 @@ fn calc_years_to_retirement(savings_contribution_per_year: f64, savings_apr: f64
     let big_x = desired_stash; // Target savings
     let big_b = initial_investment; // Initial balance
     let years = (1.0 / (1.0 + i).ln()) * ((big_a + big_x * i).ln() - (big_a + big_b * i).ln());
-
 
     round_to_cents(years)
 }
